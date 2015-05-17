@@ -1,6 +1,7 @@
 import asyncio
 import random
-from broadway.actor import Actor, ActorSystem
+from broadway.actor import Actor
+from broadway.actorsystem import ActorSystem
 from broadway.eventbus import ActorEventBus
 
 __author__ = 'leonmax'
@@ -41,7 +42,7 @@ def initialize(bus, a, b, c, echoer):
             else:
                 yield from bus.publish("/bye", "eventbus %s" % count)
         else:
-            message = yield from echoer.ask("this is cool")
+            message = yield from echoer.ask("echo %s" % count)
             print(message)
         yield from asyncio.sleep(0.01)
     yield from system.stop()
