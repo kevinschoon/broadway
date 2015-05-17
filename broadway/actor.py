@@ -44,7 +44,8 @@ class Actor():
     def ask(self, message: 'Any') -> asyncio.Future:
         promise_actor = self.context.actor_of(PromiseActor)
         yield from self.tell(message, sender=promise_actor)
-        return promise_actor.result
+        result = yield from promise_actor.response
+        return result
 
     @asyncio.coroutine
     def _deliver(self, envelop: Envelop):
@@ -111,11 +112,11 @@ class Actor():
 class PromiseActor(Actor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.result = asyncio.Future()
+        self.response = asyncio.Future()
 
     @asyncio.coroutine
     def receive(self, message):
-        self.result.set_result(message)
+        self.response.set_result(message)
         yield from self.stop()
 
 
