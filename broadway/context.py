@@ -1,6 +1,3 @@
-from broadway.actorsystem import ActorSystem
-
-
 class Props():
     def __init__(self, actor_class: type, *args, **kwargs):
         self.actor_class = actor_class
@@ -14,7 +11,7 @@ class ActorRefFactory():
 
 
 class ActorContext(ActorRefFactory):
-    def __init__(self, system: ActorSystem):
+    def __init__(self, system):
         super().__init__()
         self.system = system
         self.this = None
