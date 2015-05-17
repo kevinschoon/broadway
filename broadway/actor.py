@@ -3,6 +3,7 @@ from concurrent.futures import CancelledError
 import inspect
 import logging
 import time
+from broadway.context import Props
 from broadway.message import Envelop
 
 
@@ -35,7 +36,7 @@ class Actor():
 
     @asyncio.coroutine
     def ask(self, message: 'Any') -> asyncio.Future:
-        promise_actor = self.context.actor_of(PromiseActor)
+        promise_actor = self.context.actor_of(Props(PromiseActor))
         yield from self.tell(message, sender=promise_actor)
         result = yield from promise_actor.response
         return result

@@ -2,6 +2,7 @@ import asyncio
 import random
 from broadway.actor import Actor
 from broadway.actorsystem import ActorSystem
+from broadway.context import Props
 from broadway.eventbus import ActorEventBus
 
 __author__ = 'leonmax'
@@ -50,12 +51,12 @@ def initialize(bus, a, b, c, echoer):
 if __name__ == "__main__":
 
     system = ActorSystem()
-    a = system.actor_of(DummyActor, "a", "repeat")
-    b = system.actor_of(DummyActor, "b", "hello ", a)
-    c = system.actor_of(DummyActor, "c", "bye   ")
-    echoer = system.actor_of(EchoActor, "echoer")
+    a = system.actor_of(Props(DummyActor, "repeat"))
+    b = system.actor_of(Props(DummyActor, "hello ", a))
+    c = system.actor_of(Props(DummyActor, "bye   "))
+    echoer = system.actor_of(Props(EchoActor), "echoer")
 
-    bus = system.actor_of(ActorEventBus, "bus")
+    bus = system.actor_of(Props(ActorEventBus), "bus")
     bus.subscribe("/hello", [b])
     bus.subscribe("/bye", [c])
     coro=[initialize(bus, a, b, c, echoer)]

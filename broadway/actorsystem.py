@@ -3,7 +3,7 @@ from asyncio import coroutine as coro
 import logging
 import time
 import sys
-from broadway.context import ActorRef, ActorContext
+from broadway.context import ActorRef, ActorContext, Props
 from broadway.exception import ActorCreationFailureException
 
 __author__ = 'leonmax'
@@ -22,18 +22,23 @@ class ActorSystem():
     def uptime(self):
         return time.time() - self.startTime/1000
 
-    def actor_of(self, actor_class, actor_name=None, *args, **kwargs):
-        if not actor_name:
+    def _make_actor_name(self, actor_class, actor_name):
+        if actor_name in self._registry:
+            raise ActorCreationFailureException("actor_name already exists")
+        elif not actor_name:
             actor_name = actor_class.__name__
+            # this is inefficient...
             count = 0
             while actor_name in self._registry:
                 actor_name = "{0}${1}".format(actor_class.__name__, count)
                 count += 1
-        elif actor_name in self._registry:
-            raise ActorCreationFailureException("actor_name already exists")
-        kwargs['loop'] = self._loop
-        kwargs['context'] = ActorContext(self)
-        actor = actor_class(*args, **kwargs)
+        return actor_name
+
+    def actor_of(self, props: Props, actor_name: str=None):
+        actor_name = self._make_actor_name(props.actor_class, actor_name)
+        props.kwargs['loop'] = self._loop
+        props.kwargs['context'] = ActorContext(self)
+        actor = props.actor_class(*props.args, **props.kwargs)
         running_task = self._loop.create_task(actor.start())
         self._registry[actor_name] = ActorRef(actor_name, actor, running_task)
         # TODO: eventually want to have actorRef expose instead of actor itself
