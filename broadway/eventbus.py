@@ -2,34 +2,60 @@ import asyncio
 import functools
 import os
 import random
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from signal import SIGINT, SIGTERM
 import signal
 import time
+from broadway.actor import Actor, caller
 
 __author__ = 'leonmax'
 
-Message = namedtuple('Message', ['channel', 'data'])
+Message = namedtuple('Message', ['channel', 'payload'])
 
 
 class DummyLoader():
     def load(self, raw_data):
         return raw_data
 
+
 class EventBus():
-    def subscribe(self, channel, handlers, loader=None):
+    def subscribe(self, channel, handlers):
         raise NotImplementedError()
 
     def unsubscribe(self, channel, handlers):
         raise NotImplementedError()
 
     @asyncio.coroutine
-    def publish(self, channel, data):
+    def publish(self, channel, payload):
         raise NotImplementedError()
+
+
+class ActorEventBus(EventBus, Actor):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._subscribers = defaultdict(set)
+
+    def subscribe(self, channel, actors):
+        self._subscribers[channel] |= set(actors)
+
+    def unsubscribe(self, channel, actors):
+        if channel in self._subscribers:
+            self._subscribers[channel] -= set(actors)
+
+    @asyncio.coroutine
+    def publish(self, channel, payload):
+        sender = caller()
+        yield from self.tell(Message(channel, payload), sender=sender)
+
+    @asyncio.coroutine
+    def receive(self, message):
+        if message.channel in self._subscribers:
+            for sub in self._subscribers[message.channel]:
+                yield from sub.tell(message.payload, self.context.sender)
 
 class BasicEventBus(EventBus):
     def __init__(self, loop=None):
-        self.loop = loop if loop else asyncio.get_event_loop()
+        self.loop = loop or asyncio.get_event_loop()
         self._loaders = {}
         self._bus = asyncio.Queue()
         self._subscribers = {}
@@ -56,7 +82,7 @@ class BasicEventBus(EventBus):
     def start(self):
         while True:
             msg = yield from self._bus.get()
-            event = self._loaders.setdefault(msg.channel, DummyLoader()).load(msg.data)
+            event = self._loaders.setdefault(msg.channel, DummyLoader()).load(msg.payload)
             if msg.channel in self._subscribers:
                 for handler in self._subscribers[msg.channel]:
                     self.loop.create_task(handler(event))
@@ -86,7 +112,7 @@ if __name__ == "__main__":
             #     self.last = now
 
     @asyncio.coroutine
-    def hello_world():
+    def hello_world(bus):
         while True:
             seed = random.random()
             if seed < 0.5:
@@ -101,5 +127,5 @@ if __name__ == "__main__":
     bus.subscribe("/bye", [Runner("bye").process])
 
     asyncio.Task(bus.start())
-    asyncio.Task(hello_world())
+    asyncio.Task(hello_world(bus))
     bus.run_forever()
