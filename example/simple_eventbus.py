@@ -1,10 +1,12 @@
 import asyncio
+from asyncio import coroutine as coro
 import random
 from broadway.actor import Actor
 from broadway.actorsystem import ActorSystem
 from broadway.actorref import Props
 from broadway.eventbus import ActorEventBus
 
+namedtuple
 
 class DummyActor(Actor):
     def __init__(self, name, partner=None):
@@ -12,13 +14,14 @@ class DummyActor(Actor):
         self.name = name
         self.partner = partner
 
-    @asyncio.coroutine
+    @coro
     def receive(self, message):
+        yield from asyncio.sleep(random.random() / 10)
         print(self.name, message)
         if self.partner:
             yield from self.partner.tell(message)
 
-@asyncio.coroutine
+@coro
 def task(bus):
     for count in range(100):
         if random.random() < 0.5:
@@ -26,7 +29,7 @@ def task(bus):
         else:
             yield from bus.publish("/bye", "world %s" % count)
         yield from asyncio.sleep(0.001)
-    yield from system.stop()
+    # yield from system.stop()
 
 if __name__ == "__main__":
     system = ActorSystem()

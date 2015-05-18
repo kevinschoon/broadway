@@ -33,7 +33,7 @@ class ActorContext():
 
 
 class ActorCell(ActorContext, ActorRefFactory):
-    def __init__(self, system, name, props, max_inbox_size=0):
+    def __init__(self, system, name, props, mailbox):
         super().__init__()
         self._system = system
         self._name = name
@@ -44,9 +44,7 @@ class ActorCell(ActorContext, ActorRefFactory):
         self._actor = self.new_actor()
 
         self._loop = system._loop
-        self._max_inbox_size = max_inbox_size
-        self._inbox = asyncio.Queue(maxsize=self._max_inbox_size,
-                                    loop=self._loop)
+        self._inbox = mailbox
         self.task = None
         self.await_complete = None
         self.receive_timeout = None
@@ -115,8 +113,7 @@ class ActorCell(ActorContext, ActorRefFactory):
             logging.info("task successfully cancelled")
         finally:
             # Signal that the loop has finished.
-            if not (self.await_complete.cancelled() or
-                self.await_complete.done()):
+            if not (self.await_complete.cancelled() or self.await_complete.done()):
                 self.await_complete.set_result(True)
 
     # @asyncio.coroutine
@@ -126,7 +123,10 @@ class ActorCell(ActorContext, ActorRefFactory):
     @coro
     def _invoke(self, envelop):
         try:
-            self._sender = envelop.sender
+            if envelop.sender:
+                self._sender = envelop.sender
+            else:
+                self._sender = self.system.dead_letters
             yield from self._actor.receive(envelop.message)
         except CancelledError as e:
             raise e

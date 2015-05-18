@@ -1,4 +1,5 @@
 import asyncio
+from asyncio import coroutine as coro
 import random
 from broadway.actor import Actor
 from broadway.actorsystem import ActorSystem
@@ -11,37 +12,41 @@ class DummyActor(Actor):
         self.name = name
         self.partner = partner
 
-    @asyncio.coroutine
+    @coro
     def receive(self, message):
         print(self.name, message)
         if self.partner:
             yield from self.partner.tell(message)
 
 class EchoActor(Actor):
-    @asyncio.coroutine
-    def receive(self, message):
-        yield from self.sender.tell(message)
+    def __init__(self, name, partner=None):
+        super().__init__()
+        self.name = name
 
-@asyncio.coroutine
-def task(a, b, c, echoer):
+    @coro
+    def receive(self, message):
+        yield from self.sender.tell("%s %s" % (self.name, message))
+
+@coro
+def task(forwardee, forwarder, dummy, echoer):
     for count in range(100):
         seed = random.random()
         if seed < 0.3:
-            yield from a.tell("actor %s" % count)
+            yield from forwarder.tell("actor %s" % count)
         elif seed < 0.6:
-            yield from c.tell("actor %s" % count)
+            yield from dummy.tell("actor %s" % count)
         else:
-            message = yield from echoer.ask("echo %s" % count)
+            message = yield from echoer.ask("actor %s" % count)
             print(message)
         yield from asyncio.sleep(0.001)
     yield from system.stop()
 
 if __name__ == "__main__":
     system = ActorSystem()
-    a = system.actor_of(Props(DummyActor, "repeat"))
-    b = system.actor_of(Props(DummyActor, "hello ", a))
-    c = system.actor_of(Props(DummyActor, "bye   "))
-    echoer = system.actor_of(Props(EchoActor), "echoer")
+    forwardee = system.actor_of(Props(DummyActor, "forwardee"))
+    forwarder = system.actor_of(Props(DummyActor, "forwarder", forwardee))
+    dummy     = system.actor_of(Props(DummyActor, "dummy    "))
+    echoer    = system.actor_of(Props(EchoActor,  "echoer   "))
 
-    coro=task(a, b, c, echoer)
+    coro = task(forwardee, forwarder, dummy, echoer)
     system.run_until_stop([coro], exit_after=True)
