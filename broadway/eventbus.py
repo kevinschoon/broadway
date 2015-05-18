@@ -1,12 +1,8 @@
 import asyncio
-import functools
-import os
 import random
 from collections import namedtuple, defaultdict
-from signal import SIGINT, SIGTERM
-import signal
-import time
-from broadway.actor import Actor, caller
+from broadway.actor import Actor
+from broadway.util import caller
 
 __author__ = 'leonmax'
 
@@ -30,7 +26,7 @@ class EventBus():
         raise NotImplementedError()
 
 
-class ActorEventBus(EventBus, Actor):
+class ActorEventBus(EventBus):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._subscribers = defaultdict(set)
@@ -45,13 +41,10 @@ class ActorEventBus(EventBus, Actor):
     @asyncio.coroutine
     def publish(self, channel, payload):
         sender = caller()
-        yield from self.tell(Message(channel, payload), sender=sender)
+        if channel in self._subscribers:
+            for sub in self._subscribers[channel]:
+                yield from sub.tell(payload, sender)
 
-    @asyncio.coroutine
-    def receive(self, message):
-        if message.channel in self._subscribers:
-            for sub in self._subscribers[message.channel]:
-                yield from sub.tell(message.payload, self.context.sender)
 
 class BasicEventBus(EventBus):
     def __init__(self, loop=None):

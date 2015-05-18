@@ -2,14 +2,14 @@ import asyncio
 import random
 from broadway.actor import Actor
 from broadway.actorsystem import ActorSystem
-from broadway.context import Props
+from broadway.cell import Props
 from broadway.eventbus import ActorEventBus
 
 __author__ = 'leonmax'
 
 class DummyActor(Actor):
-    def __init__(self, name, partner=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, name, partner=None):
+        super().__init__()
         self.name = name
         self.partner = partner
 
@@ -20,15 +20,12 @@ class DummyActor(Actor):
             yield from self.partner.tell(message)
 
 class EchoActor(Actor):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     @asyncio.coroutine
     def receive(self, message):
-        yield from self.context.sender.tell(message)
+        yield from self.sender.tell(message)
 
 @asyncio.coroutine
-def initialize(bus, a, b, c, echoer):
+def task(bus, a, b, c, echoer):
     count = 0
     while count < 60:
         count += 1
@@ -56,8 +53,8 @@ if __name__ == "__main__":
     c = system.actor_of(Props(DummyActor, "bye   "))
     echoer = system.actor_of(Props(EchoActor), "echoer")
 
-    bus = system.actor_of(Props(ActorEventBus), "bus")
+    bus = ActorEventBus()
     bus.subscribe("/hello", [b])
     bus.subscribe("/bye", [c])
-    coro=[initialize(bus, a, b, c, echoer)]
+    coro=[task(bus, a, b, c, echoer)]
     system.run_until_stop(coro, exit_after=True)

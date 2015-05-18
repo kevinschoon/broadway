@@ -3,12 +3,12 @@ from asyncio import coroutine as coro
 import logging
 import time
 import sys
-from broadway.context import ActorRef, ActorContext, Props
+from broadway.actorref import Props, ActorRefFactory
+from broadway.cell import ActorCell
 from broadway.exception import ActorCreationFailureException
 
-__author__ = 'leonmax'
 
-class ActorSystem():
+class ActorSystem(ActorRefFactory):
     def __init__(self, loop=None):
         self._loop = loop if loop else asyncio.get_event_loop()
         self._registry = {}
@@ -36,13 +36,9 @@ class ActorSystem():
 
     def actor_of(self, props: Props, actor_name: str=None):
         actor_name = self._make_actor_name(props.actor_class, actor_name)
-        props.kwargs['loop'] = self._loop
-        props.kwargs['context'] = ActorContext(self)
-        actor = props.actor_class(*props.args, **props.kwargs)
-        running_task = self._loop.create_task(actor.start())
-        self._registry[actor_name] = ActorRef(actor_name, actor, running_task)
-        # TODO: eventually want to have actorRef expose instead of actor itself
-        return actor
+        actor_cell = ActorCell(self, actor_name, props).run(self._loop)
+        self._registry[actor_name] = actor_cell
+        return actor_cell.this
 
     @coro
     def stop(self):
@@ -69,9 +65,9 @@ class ActorSystem():
             task = futures.pop()
             task.cancel()
         while self._registry:
-            name, actor_ref = self._registry.popitem()
-            futures.append(actor_ref.task)
-            actor_ref.task.cancel()
+            name, cell = self._registry.popitem()
+            futures.append(cell.task)
+            cell.task.cancel()
 
         yield from asyncio.wait(futures)
 
