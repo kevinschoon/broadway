@@ -33,7 +33,7 @@ def task(a, b, c, echoer):
         else:
             message = yield from echoer.ask("echo %s" % count)
             print(message)
-        yield from asyncio.sleep(0.01)
+        yield from asyncio.sleep(0.001)
     yield from system.stop()
 
 if __name__ == "__main__":

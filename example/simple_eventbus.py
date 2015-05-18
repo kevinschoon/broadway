@@ -25,7 +25,7 @@ def task(bus):
             yield from bus.publish("/hello", "world %s" % count)
         else:
             yield from bus.publish("/bye", "world %s" % count)
-        yield from asyncio.sleep(0.01)
+        yield from asyncio.sleep(0.001)
     yield from system.stop()
 
 if __name__ == "__main__":
