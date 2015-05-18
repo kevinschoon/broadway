@@ -33,10 +33,12 @@ class ActorEventBus(EventBus):
 
     def subscribe(self, channel, actors):
         self._subscribers[channel] |= set(actors)
+        return self
 
     def unsubscribe(self, channel, actors):
         if channel in self._subscribers:
             self._subscribers[channel] -= set(actors)
+        return self
 
     @asyncio.coroutine
     def publish(self, channel, payload):
