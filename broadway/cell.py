@@ -6,7 +6,7 @@ from broadway.actorref import ActorRefFactory, ActorRef, Props
 from broadway.message import Envelop
 
 
-class ActorContext(ActorRefFactory):
+class ActorContext():
     def __init__(self):
         super().__init__()
         self.receive_timeout = None
@@ -31,11 +31,8 @@ class ActorContext(ActorRefFactory):
     def sender(self):
         raise NotImplementedError()
 
-    def actor_of(self, props: Props, actor_name=None):
-        return self.system.actor_of(props, actor_name)
 
-
-class ActorCell(ActorContext):
+class ActorCell(ActorContext, ActorRefFactory):
     def __init__(self, system, name, props, max_inbox_size=0):
         super().__init__()
         self._system = system
@@ -92,6 +89,9 @@ class ActorCell(ActorContext):
         if self._resume:
             self._resume.set_result(True)
     # endregion
+
+    def actor_of(self, props: Props, actor_name=None):
+        return self.system.actor_of(props, actor_name)
 
     @coro
     def deliver(self, envelop: Envelop):

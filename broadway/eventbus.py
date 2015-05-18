@@ -1,10 +1,7 @@
 import asyncio
 import random
 from collections import namedtuple, defaultdict
-from broadway.actor import Actor
 from broadway.util import caller
-
-__author__ = 'leonmax'
 
 Message = namedtuple('Message', ['channel', 'payload'])
 
@@ -63,10 +60,12 @@ class BasicEventBus(EventBus):
             self._loaders[channel] = loader
         channel_handlers = self._subscribers.setdefault(channel, [])
         channel_handlers += handlers
+        return self
 
     def unsubscribe(self, channel, handlers):
         if channel in self._subscribers:
             self._subscribers[channel] -= handlers
+        return self
 
     @asyncio.coroutine
     def publish(self, channel, data):
@@ -89,37 +88,25 @@ class BasicEventBus(EventBus):
             self.loop.close()
 
 if __name__ == "__main__":
-
     class Runner():
         def __init__(self, name):
             self.name = name
             self.count = 0
-            self.last = None
 
         @asyncio.coroutine
         def process(self, event):
             self.count += 1
             print(self.name, event, self.count)
-            # if self.count % 10000 == 0:
-            #     now = time.time()
-            #     if self.last:
-            #         print("ratio: %s" % (10000/(now - self.last)))
-            #     self.last = now
 
     @asyncio.coroutine
     def hello_world(bus):
         while True:
-            seed = random.random()
-            if seed < 0.5:
-                channel = "/hello"
-            else:
-                channel = "/bye"
-            yield from bus.publish(channel, "world")
+            bus.publish("/hello" if random.random() < 0.5 else "/bye", "world")
             yield from asyncio.sleep(0.1)
 
-    bus = BasicEventBus()
-    bus.subscribe("/hello", [Runner("hello").process])
-    bus.subscribe("/bye", [Runner("bye").process])
+    bus = BasicEventBus()\
+        .subscribe("/hello", [Runner("hello").process])\
+        .subscribe("/bye", [Runner("bye").process])
 
     asyncio.Task(bus.start())
     asyncio.Task(hello_world(bus))

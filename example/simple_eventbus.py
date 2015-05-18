@@ -2,7 +2,7 @@ import asyncio
 import random
 from broadway.actor import Actor
 from broadway.actorsystem import ActorSystem
-from broadway.cell import Props
+from broadway.actorref import Props
 from broadway.eventbus import ActorEventBus
 
 
