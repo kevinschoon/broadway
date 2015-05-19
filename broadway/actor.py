@@ -1,24 +1,18 @@
-import asyncio
-from asyncio import coroutine as coro
+from asyncio import coroutine
 
 
 class Actor():
-    def __init__(self):
-        self.context = None
+    context = None
 
-    def with_context(self, context):
-        self.context = context
-        return self
-
-    @coro
+    @coroutine
     def receive(self, message: 'Any'):
         pass
 
-    @coro
+    @coroutine
     def pre_start(self):
         pass
 
-    @coro
+    @coroutine
     def post_stop(self):
         pass
 
@@ -28,7 +22,7 @@ class Actor():
 
 
 class DeadLetterActor(Actor):
-    @coro
+    @coroutine
     def receive(self, message):
         # TODO: we need to block mailbox
         pass

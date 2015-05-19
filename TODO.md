@@ -1,7 +1,7 @@
 ## ActorPath
 for address, actor hierarchy and supervision (error handling, restart, etc)
 
-##SystemMessages
+## SystemMessages
 privileged messages (`PoisonPill`, `Stop`, `Restart`, `etc`) over regular ones
 
 ## Dispatcher
@@ -13,7 +13,8 @@ make possible to become/unbecome and handle message better
 
 ## Pattern Matching
 maybe with support of [pyfpm](https://github.com/martinblech/pyfpm)
-or [Sour's pattern](https://github.com/Suor/patterns/)
+or [Suor's pattern](https://github.com/Suor/patterns/)
+or [macropy](https://github.com/lihaoyi/macropy#pattern-matching)
 
 ## Routing
 different type of routing for broadcasting/fanout, loadbalancing or parallellism.

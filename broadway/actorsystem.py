@@ -1,11 +1,12 @@
+import logging
+import sys
+import time
 import asyncio
 from asyncio import coroutine, iscoroutine, iscoroutinefunction
 from inspect import isfunction, isbuiltin
-import logging
-import time
-import sys
-from broadway.actorref import Props, ActorRefFactory
+from broadway.actor import Actor
 from broadway.cell import ActorCell
+from broadway.actorref import Props, ActorRefFactory
 from broadway.exception import ActorCreationFailureException
 
 
@@ -40,7 +41,16 @@ class ActorSystem(ActorRefFactory):
         return asyncio.Queue(maxsize=max_inbox_size,
                              loop=self._loop)
 
-    def actor_of(self, props: Props, actor_name: str=None):
+    def _make_props(self, props_or_class):
+        if isinstance(props_or_class, type) and issubclass(props_or_class, Actor):
+            return Props(props_or_class)
+        elif isinstance(props_or_class, Props):
+            return props_or_class
+        else:
+            raise TypeError("%s not an Actor class or Props" % props_or_class)
+
+    def actor_of(self, props_or_class, actor_name=None):
+        props = self._make_props(props_or_class)
         actor_name = self._make_actor_name(props.actor_class, actor_name)
         actor_cell = ActorCell(self, actor_name, props, self.new_mailbox())
         self._registry[actor_name] = actor_cell.run(self._loop)
@@ -77,28 +87,27 @@ class ActorSystem(ActorRefFactory):
 
         yield from asyncio.wait(futures)
 
-    def exec(self, obj, *args):
-        if iscoroutine(obj):
-            future = self._loop.create_task(obj)
-        elif iscoroutinefunction(obj):
-            future = self._loop.create_task(obj(*args))
-        elif isfunction(obj) or isbuiltin(obj):
+    def exec(self, to_be_exec, *args):
+        if not to_be_exec:
+            return
+        elif iscoroutine(to_be_exec):
+            self._other_tasks.add(self._loop.create_task(to_be_exec))
+        elif iscoroutinefunction(to_be_exec):
+            self._other_tasks.add(self._loop.create_task(to_be_exec(*args)))
+        elif isfunction(to_be_exec) or isbuiltin(to_be_exec):
             # TODO: ability to use executor defined in settings
-            future = self.exec_in_executor(obj, None, *args)
-        return future
+            self._other_tasks.add(self.exec_in_executor(to_be_exec, None, *args))
+        else:
+            # raise TypeError if to_be_exec is not generator either
+            for i in iter(to_be_exec):
+                self.exec(i, *args)
 
     def exec_in_executor(self, non_coro_func, executor=None, *args):
         return self._loop.create_task(self._loop.run_in_executor(executor, non_coro_func, *args))
 
-    def run_until_stop(self, coros, exit_after=False):
+    def run_until_stop(self, to_be_exec=None, exit_after=False):
         try:
-            try:
-                _it = iter(coros)
-            except TypeError:
-                _it = iter([coros])
-            for c in _it:
-                task = self._loop.create_task(c)
-                self._other_tasks.add(task)
+            self.exec(to_be_exec)
 
             self._loop.run_until_complete(self._start())
             if exit_after:
@@ -107,7 +116,7 @@ class ActorSystem(ActorRefFactory):
                 self._loop.close()
                 sys.exit(0)
         except Exception as e:
-            logging.error(e)
+            logging.exception('Unhandled exception in actorsystem')
             self._loop.stop()
             self._loop.close()
             sys.exit(1)

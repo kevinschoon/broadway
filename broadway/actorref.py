@@ -1,6 +1,6 @@
-import asyncio
-from asyncio import coroutine as coro
 import time
+import asyncio
+from asyncio import coroutine
 from broadway.message import Envelop
 from broadway.util import caller
 
@@ -17,13 +17,13 @@ class ActorRef():
         self.name = name
         self.cell = cell
 
-    @coro
+    @coroutine
     def tell(self, message: 'Any', sender=None):
         if not sender:
             sender = caller()
         yield from self.cell.deliver(Envelop(sender, message, time.time()))
 
-    @coro
+    @coroutine
     def ask(self, message: 'Any') -> asyncio.Future:
         promise_actor_ref = PromiseActorRef()
         yield from self.tell(message, sender=promise_actor_ref)
@@ -36,7 +36,7 @@ class PromiseActorRef(ActorRef):
         super().__init__("name from actor", "maybe no cell")
         self.response = asyncio.Future()
 
-    @coro
+    @coroutine
     def tell(self, message: 'Any', sender=None):
         self.response.set_result(message)
 

@@ -1,4 +1,5 @@
 import asyncio
+from asyncio import coroutine
 import random
 from collections import namedtuple, defaultdict
 from broadway.util import caller
@@ -18,7 +19,7 @@ class EventBus():
     def unsubscribe(self, channel, handlers):
         raise NotImplementedError()
 
-    @asyncio.coroutine
+    @coroutine
     def publish(self, channel, payload):
         raise NotImplementedError()
 
@@ -37,7 +38,7 @@ class ActorEventBus(EventBus):
             self._subscribers[channel] -= set(actors)
         return self
 
-    @asyncio.coroutine
+    @coroutine
     def publish(self, channel, payload):
         sender = caller()
         if channel in self._subscribers:
@@ -67,12 +68,12 @@ class BasicEventBus(EventBus):
             self._subscribers[channel] -= handlers
         return self
 
-    @asyncio.coroutine
+    @coroutine
     def publish(self, channel, data):
         msg = Message(channel, data)
         yield from self._bus.put(msg)
 
-    @asyncio.coroutine
+    @coroutine
     def start(self):
         while True:
             msg = yield from self._bus.get()
@@ -93,12 +94,12 @@ if __name__ == "__main__":
             self.name = name
             self.count = 0
 
-        @asyncio.coroutine
+        @coroutine
         def process(self, event):
             self.count += 1
             print(self.name, event, self.count)
 
-    @asyncio.coroutine
+    @coroutine
     def hello_world(bus):
         while True:
             bus.publish("/hello" if random.random() < 0.5 else "/bye", "world")
