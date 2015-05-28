@@ -1,9 +1,3 @@
-broadway package
-================
-
-Submodules
-----------
-
 broadway.actor module
 ---------------------
 

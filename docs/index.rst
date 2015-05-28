@@ -1,21 +1,43 @@
-.. Broadway documentation master file, created by
-   sphinx-quickstart on Mon May 18 18:39:59 2015.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Broadway -  A Python Implementation of The Actor Model
+======================================================
 
-Welcome to Broadway's documentation!
-====================================
+Broadway is a Python implementation of the `actor model <https://en.wikipedia.org/wiki/Actor_model>`_ programming paradigm,
+and is implemented with Python 3.4's `Asyncio <https://docs.python.org/3/library/asyncio.html>`_, Broadway is also
+heavily inspired by the Scala framework `Akka <http://akka.io/>`_.
 
-Actor system implemented in asyncio and python > 3.4 (concept heavily borrowed from akka!)
+Hello World
+-----------
+
+.. literalinclude:: ../examples/hello_world.py
+
+.. code-block:: bash
+
+    $ python examples/hello_world.py
+    hello world (1)
+    hello world (2)
+    hello world (3)
+    hello world (4)
+    hello world (5)
+
+
+User Guide
+==========
 
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 2
 
-   introduction
-   tutorials
-   api_docs/broadway
+    guide/concepts
+    guide/examples
+    guide/install
 
 
+API Documentation
+=================
+
+.. toctree::
+    :maxdepth: 4
+
+    api/broadway
 
 Indices and tables
 ==================
@@ -23,4 +45,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
