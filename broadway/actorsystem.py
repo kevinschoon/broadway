@@ -16,14 +16,18 @@ class ActorSystem(ActorRefFactory):
         self._registry = {}
         self._terminated = None
         self._other_tasks = set()
-        self.settings = {}  # TODO: settings
-        self.start_time = time.time() * 1000
-        self.dead_letters = self.new_mailbox()
+        self.settings = {}  #TODO: settings
+        self._start_time = time.time() * 1000
+        self._dead_letters = self._new_mailbox()
         # TODO: address / actor hierarchy
 
     @property
     def uptime(self):
-        return time.time() - self.start_time/1000
+        return time.time() - self._start_time/1000
+
+    def _new_mailbox(self, max_inbox_size=0):
+        return asyncio.Queue(maxsize=max_inbox_size,
+                             loop=self._loop)
 
     def _make_actor_name(self, actor_class, actor_name):
         if actor_name in self._registry:
@@ -37,10 +41,6 @@ class ActorSystem(ActorRefFactory):
                 count += 1
         return actor_name
 
-    def new_mailbox(self, max_inbox_size=0):
-        return asyncio.Queue(maxsize=max_inbox_size,
-                             loop=self._loop)
-
     def _make_props(self, props_or_class):
         if isinstance(props_or_class, type) and issubclass(props_or_class, Actor):
             return Props(props_or_class)
@@ -52,7 +52,7 @@ class ActorSystem(ActorRefFactory):
     def actor_of(self, props_or_class, actor_name=None):
         props = self._make_props(props_or_class)
         actor_name = self._make_actor_name(props.actor_class, actor_name)
-        actor_cell = ActorCell(self, actor_name, props, self.new_mailbox())
+        actor_cell = ActorCell(self, actor_name, props, self._new_mailbox())
         self._registry[actor_name] = actor_cell.run(self._loop)
         return actor_cell.this
 

@@ -1,7 +1,8 @@
 from collections import namedtuple
 from enum import unique, Enum
 
-Envelop = namedtuple("Envelop", ["sender", "message", "timestamp"])
+class Envelop(namedtuple("Envelop", ["sender", "message", "timestamp"])):
+    pass
 
 @unique
 class SystemMessage(Enum):

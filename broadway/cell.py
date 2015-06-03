@@ -29,12 +29,26 @@ class ActorContext():
         raise NotImplementedError()
 
     @property
+    def parent(self):
+        raise NotImplementedError()
+
+    @property
+    def children(self):
+        raise NotImplementedError()
+
+    @property
     def sender(self):
+        raise NotImplementedError()
+
+    def become(self, new_receive, discard_old=True):
+        raise NotImplementedError()
+
+    def unbecome(self):
         raise NotImplementedError()
 
 
 class ActorCell(ActorContext, ActorRefFactory):
-    def __init__(self, system, name, props, mailbox):
+    def __init__(self, system, name, props, mailbox, parent=None):
         super().__init__()
         self._system = system
         self._name = name
@@ -48,10 +62,13 @@ class ActorCell(ActorContext, ActorRefFactory):
         self._sender = None
 
         self._self_ref = ActorRef(name, self)
+        self._parent = None
+        self._children = set()
         # TODO: need better actor supervision
-        self._actor = self.new_actor()
+        self._actor = self._new_actor()
+        self._behavior_stack = []
 
-    def new_actor(self):
+    def _new_actor(self):
         actor_class = self._props.actor_class
         args = self._props.args
         kwargs = self._props.kwargs
@@ -60,7 +77,6 @@ class ActorCell(ActorContext, ActorRefFactory):
         self.wrap_init_with_context(actor_class)
         actor = actor_class(*args, **kwargs)  #.with_context(self)
         return actor
-
 
     def wrap_init_with_context(self, actor_class):
         actor_base_class = actor_class
@@ -90,21 +106,29 @@ class ActorCell(ActorContext, ActorRefFactory):
         return self._self_ref
 
     @property
+    def parent(self):
+        return self._parent
+
+    @property
+    def children(self):
+        return self._children
+
+    @property
     def sender(self):
         return self._sender
 
-    @property
     def suspend(self):
         self._resume = asyncio.Future()
 
-    @property
     def resume(self):
         if self._resume:
             self._resume.set_result(True)
     # endregion
 
     def actor_of(self, props: Props, actor_name=None):
-        return self.system.actor_of(props, actor_name)
+        new_actor_ref = self.system.actor_of(props, actor_name, parent=self._self_ref)
+        self._children.add(new_actor_ref)
+        return new_actor_ref
 
     @coroutine
     def deliver(self, envelop: Envelop):
@@ -160,3 +184,15 @@ class ActorCell(ActorContext, ActorRefFactory):
                     self.await_complete.done()):
             yield from self._actor.post_stop()
             yield from self.await_complete
+
+    def become(self, new_receive, discard_old=True):
+        if self.await_complete and not (
+                    self.await_complete.cancelled() or
+                    self.await_complete.done()):
+            if discard_old:
+                self._behavior_stack.append(self._actor.receive)
+            self._actor.receive = new_receive
+
+    def unbecome(self):
+        if len(self._behavior_stack) > 0:
+            self._actor.receive = self._behavior_stack.pop()

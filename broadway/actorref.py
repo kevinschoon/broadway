@@ -15,13 +15,13 @@ class Props():
 class ActorRef():
     def __init__(self, name, cell):
         self.name = name
-        self.cell = cell
+        self._cell = cell
 
     @coroutine
     def tell(self, message: 'Any', sender=None):
         if not sender:
             sender = caller()
-        yield from self.cell.deliver(Envelop(sender, message, time.time()))
+        yield from self._cell.deliver(Envelop(sender, message, time.time()))
 
     @coroutine
     def ask(self, message: 'Any') -> asyncio.Future:
