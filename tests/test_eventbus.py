@@ -54,4 +54,3 @@ class TestEventBus(unittest.TestCase):
         self.assertEquals(len(r_msg), MESSAGE_COUNT)
         self.assertEquals(len(p_msg), MESSAGE_COUNT)
         self.assertEquals(len(msg), MESSAGE_COUNT)
-
